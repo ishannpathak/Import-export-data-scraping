@@ -1,0 +1,122 @@
+!pip install selenium
+!apt-get update
+!apt install chromium-chromedriver
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.actions import mouse_button
+import time
+from selenium.webdriver.support.select import Select
+from selenium.webdriver.common.by import By
+import pandas as pd
+
+options = webdriver.ChromeOptions()
+options.add_argument('--headless')
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
+
+site = 'https://tradestat.commerce.gov.in/eidb/icntq.asp' 
+
+driver = webdriver.Chrome('chromedriver',options=options)
+
+def reverse(list):
+    new_list = list[::-1]
+    return new_list
+    
+year_list1 = ['2007-2008','2008-2009','2009-2010','2010-2011','2011-2012',
+             '2012-2013','2013-2014','2014-2015','2015-2016','2016-2017','2017-2018']
+             
+year_list = reverse(year_list1)    
+
+fiscal_year_list= []
+import_list = []
+
+currency_list = ['Rs.', 'US$', 'Rs.', 'US$','Rs.', 'US$','Rs.', 'US$',
+                 'Rs.', 'US$', 'Rs.', 'US$','Rs.', 'US$','Rs.', 'US$',
+                 'Rs.', 'US$', 'Rs.', 'US$','Rs.', 'US$']
+                 
+driver.get(site)
+time.sleep(2)
+
+for i in range(len(year_list)):
+    #finding year dropdown
+    year_dropdown = driver.find_element(by = By.ID, value='select2')
+    year = Select(year_dropdown)
+    year.select_by_visible_text(year_list[i])
+    
+    #submit button leads to table
+    submit_button = driver.find_element(by = By.ID, value='button1')
+    submit_button.click()
+    time.sleep(2)
+
+    #scraping year text
+    fiscal_year = driver.find_element(by = By.XPATH, value='/html/body/div/div[2]/div/table/tbody/tr[1]/th[5]/font').text
+    fiscal_year_list.append(fiscal_year)
+
+    #scraping total export amount 
+
+    #finding all bold elements in the webpage 
+    bold_elements = driver.find_elements(by = By.TAG_NAME, value='strong')
+    #There are overall 7 bold elements, out of which, the export amount cell is the fourth element 
+    import_cell = bold_elements[4]
+    #Scraping the text value of export amount cell
+    import_amount = import_cell.text
+    import_list.append(import_amount)
+    
+    #going back to default ministry page
+    default = driver.find_element(by = By.XPATH, value = '/html/body/div/div[3]/a[2]')
+    default.click()
+    time.sleep(2)
+    #going back to home export page
+    home = driver.find_element(by = By.XPATH, value = '/html/body/div[2]/table[1]/tbody/tr[6]/td[6]/p/a/font/strong')
+    home.click()
+    time.sleep(2)
+    
+    #setting currency as dollar this time
+    dollarvalue =  driver.find_element(by = By.ID, value='radiousd')
+    dollarvalue.click()
+
+    #setting the year again
+    year_dropdown = driver.find_element(by = By.ID, value='select2')
+    year = Select(year_dropdown)
+    year.select_by_visible_text(year_list[i])
+
+    #submit button leads to table
+    submit_button = driver.find_element(by = By.ID, value='button1')
+    submit_button.click()
+    time.sleep(2)
+    
+    #scraping year text
+    fiscal_year_dollar = driver.find_element(by = By.XPATH, value='/html/body/div/div[2]/div/table/tbody/tr[1]/th[5]/font').text
+    fiscal_year_list.append(fiscal_year_dollar)
+   
+    #scraping total export amount 
+
+    #finding all bold elements in the webpage 
+    bold_elements_dollar = driver.find_elements(by = By.TAG_NAME, value='strong')
+    #There are overall 7 bold elements, out of which, the export amount cell is the fourth element 
+    import_cell_dollar = bold_elements_dollar[4]
+    #Scraping the text value of export amount cell
+    import_amount_dollar = import_cell_dollar.text
+    import_list.append(import_amount_dollar)
+    
+    #going back to default ministry page
+    default = driver.find_element(by = By.XPATH, value = '/html/body/div/div[3]/a[2]')
+    default.click()
+    time.sleep(2)
+    
+    #going back to home export page
+    home = driver.find_element(by = By.XPATH, value = '/html/body/div[2]/table[1]/tbody/tr[6]/td[6]/p/a/font/strong')
+    home.click()
+    time.sleep(2)
+
+    print(import_list)
+
+
+
+driver.quit()
+
+df = {'Year' : fiscal_year_list, 'Currency' : currency_list,   'Value' : import_list}
+df_data = pd.DataFrame(df)
+
+df_data.to_csv('import_data.csv', index = False)
